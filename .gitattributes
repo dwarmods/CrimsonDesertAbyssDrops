@@ -1,0 +1,3 @@
+# Vanilla drop-table binaries and built overlays
+*.staticinfobody binary
+*.staticinfoheader binary

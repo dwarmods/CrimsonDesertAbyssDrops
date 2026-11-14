@@ -1,0 +1,201 @@
+{
+  "id": "AbyssKillDrops",
+  "title": "Abyss Kill Drops",
+  "author": "Stas",
+  "version": "2.1.0",
+  "game_version": "2.05.00",
+  "format": "crimson_browser_mod_v1",
+  "files_dir": "files",
+  "priority": 1,
+  "item_key": 75001,
+  "item_name": "Abyss Artifact",
+  "rate_scale": 1000000,
+  "vanilla_base": "base/2.05.00",
+  "overlay_path": "files/0008/gamedata/binarystaticinfo__/bin",
+  "rates": [
+    {
+      "n": 20,
+      "rate": 50000,
+      "percent": "5.00%",
+      "group": "optional"
+    },
+    {
+      "n": 30,
+      "rate": 33333,
+      "percent": "3.33%",
+      "group": "main"
+    },
+    {
+      "n": 50,
+      "rate": 20000,
+      "percent": "2.00%",
+      "group": "optional"
+    },
+    {
+      "n": 100,
+      "rate": 10000,
+      "percent": "1.00%",
+      "group": "optional"
+    },
+    {
+      "n": 200,
+      "rate": 5000,
+      "percent": "0.50%",
+      "group": "optional"
+    },
+    {
+      "n": 300,
+      "rate": 3333,
+      "percent": "0.33%",
+      "group": "optional"
+    },
+    {
+      "n": 500,
+      "rate": 2000,
+      "percent": "0.20%",
+      "group": "optional"
+    }
+  ],
+  "drop_sets": [
+    {
+      "key": 175193,
+      "name": "DropSet_Character_Bandit"
+    },
+    {
+      "key": 175124,
+      "name": "DropSet_Character_BountyHunter"
+    },
+    {
+      "key": 160581,
+      "name": "DropSet_Character_Mercenary"
+    },
+    {
+      "key": 160575,
+      "name": "DropSet_Character_Soldier"
+    },
+    {
+      "key": 175126,
+      "name": "DropSet_DeshretKemist_Soldiers_Common"
+    },
+    {
+      "key": 175103,
+      "name": "DropSet_Faction_Ancient_People"
+    },
+    {
+      "key": 175025,
+      "name": "DropSet_Faction_Bandit"
+    },
+    {
+      "key": 175016,
+      "name": "DropSet_Faction_BleedBlade"
+    },
+    {
+      "key": 175033,
+      "name": "DropSet_Faction_Byron"
+    },
+    {
+      "key": 175101,
+      "name": "DropSet_Faction_CrowBrothers"
+    },
+    {
+      "key": 175091,
+      "name": "DropSet_Faction_DawnMoon"
+    },
+    {
+      "key": 175032,
+      "name": "DropSet_Faction_DemenissMP"
+    },
+    {
+      "key": 175038,
+      "name": "DropSet_Faction_Demeniss_StrongHold"
+    },
+    {
+      "key": 175053,
+      "name": "DropSet_Faction_DrunkenBlackBears"
+    },
+    {
+      "key": 175048,
+      "name": "DropSet_Faction_EntHunter"
+    },
+    {
+      "key": 175094,
+      "name": "DropSet_Faction_Faceless"
+    },
+    {
+      "key": 175020,
+      "name": "DropSet_Faction_Flame_Knights"
+    },
+    {
+      "key": 175086,
+      "name": "DropSet_Faction_GoblinSandfang"
+    },
+    {
+      "key": 175034,
+      "name": "DropSet_Faction_Hexe_Sanctuary"
+    },
+    {
+      "key": 175093,
+      "name": "DropSet_Faction_IguanaSandscale"
+    },
+    {
+      "key": 175022,
+      "name": "DropSet_Faction_LonelyJackal"
+    },
+    {
+      "key": 175030,
+      "name": "DropSet_Faction_Marchell"
+    },
+    {
+      "key": 175082,
+      "name": "DropSet_Faction_MistOwls"
+    },
+    {
+      "key": 175010,
+      "name": "DropSet_Faction_PirateI"
+    },
+    {
+      "key": 175100,
+      "name": "DropSet_Faction_ReedDevil"
+    },
+    {
+      "key": 175015,
+      "name": "DropSet_Faction_RegleGoblin"
+    },
+    {
+      "key": 175041,
+      "name": "DropSet_Faction_RufusVenmort"
+    },
+    {
+      "key": 175044,
+      "name": "DropSet_Faction_SkullKnight"
+    },
+    {
+      "key": 175042,
+      "name": "DropSet_Faction_SteelArrows"
+    },
+    {
+      "key": 175092,
+      "name": "DropSet_Faction_ThiefDusksong"
+    },
+    {
+      "key": 175087,
+      "name": "DropSet_Faction_TrollWildriders"
+    },
+    {
+      "key": 175105,
+      "name": "DropSet_Faction_Trukan"
+    },
+    {
+      "key": 175115,
+      "name": "DropSet_Faction_Wolf_Pursuer"
+    },
+    {
+      "key": 175065,
+      "name": "DropSet_Faction_WyvernTamers"
+    },
+    {
+      "key": 175582,
+      "name": "DropSet_Hexe_Common"
+    }
+  ]
+}

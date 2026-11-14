@@ -1,0 +1,278 @@
+# Release workflow for Abyss Kill Drops.
+#
+# On a v* tag (or a manual run) this builds the seven rate zips, verifies them,
+# and publishes a GitHub Release. Nexus upload is optional and skipped when
+# NEXUSMODS_API_KEY is not set, or when workflow_dispatch is started with
+# "skip_nexus".
+#
+# To enable Nexus auto-upload (official Nexus Mods GitHub Action, v3 API):
+#   1. Open https://www.nexusmods.com/settings/api-keys and create a personal
+#      API key. Add it as a repository secret named NEXUSMODS_API_KEY
+#      (Settings → Secrets and variables → Actions → New repository secret).
+#   2. On the public Files tab of the Nexus mod page, enable "Advanced" (or
+#      use Manage Files) and copy each file's ID. Add these repository
+#      variables (Settings → Secrets and variables → Actions → Variables):
+#        NEXUSMODS_MOD_ID          = 4177
+#        NEXUSMODS_FILE_ID_1IN30   = <file id of the 1-in-30 / main download>
+#        NEXUSMODS_FILE_ID_1IN20   = <file id of the 1-in-20 optional file>
+#        NEXUSMODS_FILE_ID_1IN50   = <file id of the 1-in-50 optional file>
+#        NEXUSMODS_FILE_ID_1IN100  = <file id of the 1-in-100 optional file>
+#        NEXUSMODS_FILE_ID_1IN200  = <file id of the 1-in-200 optional file>
+#        NEXUSMODS_FILE_ID_1IN300  = <file id of the 1-in-300 optional file>
+#        NEXUSMODS_FILE_ID_1IN500  = <file id of the 1-in-500 optional file>
+#      Use the file IDs of the current (2.1.0) files, not the archived 2.0.0
+#      ones. The action adds a new version to an existing file id; it does
+#      not create a brand-new Nexus file.
+#   3. Push a new v* tag. The 1-in-30 file is uploaded as category "main"
+#      and as the primary mod-manager download; the other rates are
+#      "optional". The previous version of each file is archived.
+#
+# Pin: Nexus-Mods/upload-action@v1.0.0-beta.11 (v3 createModFileVersion API).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the leading v (defaults to the tag or config version)"
+        required: false
+      skip_nexus:
+        description: "Skip Nexus upload even if NEXUSMODS_API_KEY is set"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve version
+        id: meta
+        run: |
+          set -euo pipefail
+          TAG=""
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          INPUT_VERSION="${{ github.event.inputs.version || '' }}"
+          if [[ -n "${INPUT_VERSION}" ]]; then
+            VERSION="${INPUT_VERSION#v}"
+          elif [[ -n "${TAG}" ]]; then
+            VERSION="${TAG#v}"
+          else
+            VERSION="$(python -c 'import json; print(json.load(open("config/mod.json"))["version"])')"
+          fi
+          if [[ -z "${TAG}" ]]; then
+            TAG="v${VERSION}"
+          fi
+          GAME_VERSION="$(python -c 'import json; print(json.load(open("config/mod.json"))["game_version"])')"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "game_version=${GAME_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag=${TAG} version=${VERSION} game=${GAME_VERSION}"
+
+      - name: Build overlays
+        run: python tools/build.py --version "${{ steps.meta.outputs.version }}"
+
+      - name: Verify overlays
+        run: python tools/verify.py --version "${{ steps.meta.outputs.version }}"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AbyssKillDrops_v${{ steps.meta.outputs.version }}
+          path: dist/AbyssKillDrops_1in*_v${{ steps.meta.outputs.version }}.zip
+          if-no-files-found: error
+
+      - name: Create GitHub Release if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.tag }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+          GAME="${{ steps.meta.outputs.game_version }}"
+          NOTES_FILE="$(mktemp)"
+          cat > "${NOTES_FILE}" <<END
+          Abyss Kill Drops v${VERSION}
+
+          Updated for game version ${GAME}.
+
+          Rates (install only one):
+          - 1 in 20 (5.00%)
+          - 1 in 30 (3.33%) — default / main download
+          - 1 in 50 (2.00%)
+          - 1 in 100 (1.00%)
+          - 1 in 200 (0.50%)
+          - 1 in 300 (0.33%)
+          - 1 in 500 (0.20%)
+
+          Install with Definitive Mod Manager (DMM). Remove any older version first.
+
+          Nexus Mods: https://www.nexusmods.com/crimsondesert/mods/4177
+          END
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "GitHub Release ${TAG} already exists; leaving it unchanged."
+          else
+            gh release create "${TAG}" \
+              dist/AbyssKillDrops_1in20_v${VERSION}.zip \
+              dist/AbyssKillDrops_1in30_v${VERSION}.zip \
+              dist/AbyssKillDrops_1in50_v${VERSION}.zip \
+              dist/AbyssKillDrops_1in100_v${VERSION}.zip \
+              dist/AbyssKillDrops_1in200_v${VERSION}.zip \
+              dist/AbyssKillDrops_1in300_v${VERSION}.zip \
+              dist/AbyssKillDrops_1in500_v${VERSION}.zip \
+              --title "Abyss Kill Drops v${VERSION}" \
+              --notes-file "${NOTES_FILE}"
+          fi
+
+      - name: Decide whether to upload to Nexus
+        id: nexus
+        run: |
+          set -euo pipefail
+          SKIP_INPUT="${{ github.event_name == 'workflow_dispatch' && inputs.skip_nexus || false }}"
+          if [[ "${SKIP_INPUT}" == "true" ]]; then
+            echo "::warning::skip_nexus was requested; Nexus upload will be skipped."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ -z "${NEXUSMODS_API_KEY}" ]]; then
+            echo "::warning::NEXUSMODS_API_KEY is not set; skipping Nexus upload. GitHub Release is unaffected."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Upload 1-in-30 to Nexus (main)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN30 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN30 }}
+          mod_id: ${{ vars.NEXUSMODS_MOD_ID || '4177' }}
+          filename: dist/AbyssKillDrops_1in30_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 30) (default)
+          description: 1-in-30 (3.33%) Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}.
+          version: ${{ steps.meta.outputs.version }}
+          category: main
+          primary_mod_manager_download: true
+          archive_existing_version: true
+          update_mod_version: true
+          changelog: Updated for game version ${{ steps.meta.outputs.game_version }}. Seven rate options (install only one): 1 in 20, 30 (default), 50, 100, 200, 300 or 500.
+
+      - name: Upload 1-in-20 to Nexus (optional)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN20 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN20 }}
+          filename: dist/AbyssKillDrops_1in20_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 20)
+          description: 1-in-20 Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}. Install only one rate.
+          version: ${{ steps.meta.outputs.version }}
+          category: optional
+          primary_mod_manager_download: false
+          archive_existing_version: true
+
+      - name: Upload 1-in-50 to Nexus (optional)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN50 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN50 }}
+          filename: dist/AbyssKillDrops_1in50_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 50)
+          description: 1-in-50 Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}. Install only one rate.
+          version: ${{ steps.meta.outputs.version }}
+          category: optional
+          primary_mod_manager_download: false
+          archive_existing_version: true
+
+      - name: Upload 1-in-100 to Nexus (optional)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN100 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN100 }}
+          filename: dist/AbyssKillDrops_1in100_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 100)
+          description: 1-in-100 Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}. Install only one rate.
+          version: ${{ steps.meta.outputs.version }}
+          category: optional
+          primary_mod_manager_download: false
+          archive_existing_version: true
+
+      - name: Upload 1-in-200 to Nexus (optional)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN200 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN200 }}
+          filename: dist/AbyssKillDrops_1in200_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 200)
+          description: 1-in-200 Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}. Install only one rate.
+          version: ${{ steps.meta.outputs.version }}
+          category: optional
+          primary_mod_manager_download: false
+          archive_existing_version: true
+
+      - name: Upload 1-in-300 to Nexus (optional)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN300 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN300 }}
+          filename: dist/AbyssKillDrops_1in300_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 300)
+          description: 1-in-300 Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}. Install only one rate.
+          version: ${{ steps.meta.outputs.version }}
+          category: optional
+          primary_mod_manager_download: false
+          archive_existing_version: true
+
+      - name: Upload 1-in-500 to Nexus (optional)
+        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN500 != ''
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID_1IN500 }}
+          filename: dist/AbyssKillDrops_1in500_v${{ steps.meta.outputs.version }}.zip
+          display_name: Abyss Kill Drops (1 in 500)
+          description: 1-in-500 Abyss Artifact chance on regular enemies. For game version ${{ steps.meta.outputs.game_version }}. Install only one rate.
+          version: ${{ steps.meta.outputs.version }}
+          category: optional
+          primary_mod_manager_download: false
+          archive_existing_version: true
+
+      - name: Warn if Nexus file IDs are missing
+        if: steps.nexus.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          missing=0
+          for pair in "1IN20:${{ vars.NEXUSMODS_FILE_ID_1IN20 }}" "1IN30:${{ vars.NEXUSMODS_FILE_ID_1IN30 }}" "1IN50:${{ vars.NEXUSMODS_FILE_ID_1IN50 }}" "1IN100:${{ vars.NEXUSMODS_FILE_ID_1IN100 }}" "1IN200:${{ vars.NEXUSMODS_FILE_ID_1IN200 }}" "1IN300:${{ vars.NEXUSMODS_FILE_ID_1IN300 }}" "1IN500:${{ vars.NEXUSMODS_FILE_ID_1IN500 }}"; do
+            name="${pair%%:*}"
+            value="${pair#*:}"
+            if [[ -z "${value}" ]]; then
+              echo "::warning::Repository variable NEXUSMODS_FILE_ID_${name} is not set; that rate was not uploaded."
+              missing=1
+            fi
+          done
+          if [[ "${missing}" -eq 0 ]]; then
+            echo "All Nexus file ID variables are set."
+          fi
