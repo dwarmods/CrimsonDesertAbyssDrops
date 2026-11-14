@@ -160,7 +160,7 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Upload 1-in-30 to Nexus (main)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN30 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN30 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -174,10 +174,10 @@ jobs:
           primary_mod_manager_download: true
           archive_existing_version: true
           update_mod_version: true
-          changelog: Updated for game version ${{ steps.meta.outputs.game_version }}. Seven rate options (install only one): 1 in 20, 30 (default), 50, 100, 200, 300 or 500.
+          changelog: "Updated for game version ${{ steps.meta.outputs.game_version }}. Seven rate options (install only one): 1 in 20, 30 (default), 50, 100, 200, 300 or 500."
 
       - name: Upload 1-in-20 to Nexus (optional)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN20 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN20 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -191,7 +191,7 @@ jobs:
           archive_existing_version: true
 
       - name: Upload 1-in-50 to Nexus (optional)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN50 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN50 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -205,7 +205,7 @@ jobs:
           archive_existing_version: true
 
       - name: Upload 1-in-100 to Nexus (optional)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN100 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN100 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -219,7 +219,7 @@ jobs:
           archive_existing_version: true
 
       - name: Upload 1-in-200 to Nexus (optional)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN200 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN200 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -233,7 +233,7 @@ jobs:
           archive_existing_version: true
 
       - name: Upload 1-in-300 to Nexus (optional)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN300 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN300 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -247,7 +247,7 @@ jobs:
           archive_existing_version: true
 
       - name: Upload 1-in-500 to Nexus (optional)
-        if: steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN500 != ''
+        if: ${{ steps.nexus.outputs.skip != 'true' && vars.NEXUSMODS_FILE_ID_1IN500 != '' }}
         uses: Nexus-Mods/upload-action@v1.0.0-beta.11
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -261,7 +261,7 @@ jobs:
           archive_existing_version: true
 
       - name: Warn if Nexus file IDs are missing
-        if: steps.nexus.outputs.skip != 'true'
+        if: ${{ steps.nexus.outputs.skip != 'true' }}
         run: |
           set -euo pipefail
           missing=0
